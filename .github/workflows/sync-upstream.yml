@@ -1,0 +1,54 @@
+name: 업스트림 동기화
+
+# 원본 저장소(SKNETWORKS-FAMILY-AICAMP/SKN34-3rd-1Team)의 main을
+# 이 포크의 main으로 가져온 뒤, board 브랜치에 합쳐 보드를 다시 배포합니다.
+# 개발자 팀원들의 main에는 아무것도 올리지 않습니다.
+
+on:
+  schedule:
+    - cron: '0 22 * * *'   # 매일 07:00 KST
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: git 설정
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: 업스트림 가져오기
+        run: |
+          git remote add upstream https://github.com/SKNETWORKS-FAMILY-AICAMP/SKN34-3rd-1Team.git
+          git fetch upstream main
+          git fetch origin
+
+      - name: main 갱신 (원본과 동일하게)
+        run: |
+          git checkout -B main upstream/main
+          git push origin main --force
+
+      - name: board 브랜치에 업스트림 반영
+        run: |
+          git checkout board
+          git merge --no-edit upstream/main || {
+            echo "충돌 발생 — board/ 폴더는 유지하고 나머지는 업스트림 우선"
+            git checkout --theirs . || true
+            git checkout HEAD -- board .github/workflows || true
+            git add -A
+            git commit -m "chore: 업스트림 동기화 (충돌 자동 해결)"
+          }
+          git push origin board
+
+  rebuild:
+    needs: sync
+    uses: ./.github/workflows/board.yml

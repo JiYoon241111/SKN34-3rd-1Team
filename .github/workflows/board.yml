@@ -1,12 +1,10 @@
-name: 화면별 관리 보드 배포
+name: 관리 보드 배포
 
 on:
   push:
-    branches: [main]
+    branches: [board]
     paths:
-      - 'tools/govbiz-screens.js'
-      - 'tools/build-frames.js'
-      - 'tools/build-board.mjs'
+      - 'board/**'
       - '.github/workflows/board.yml'
   workflow_dispatch:
 
@@ -24,13 +22,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: board
 
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: 프레임 생성
-        run: node tools/build-board.mjs
+        run: node board/build-board.mjs
 
       - name: 생성 결과 확인
         run: |
