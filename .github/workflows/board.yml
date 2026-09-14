@@ -1,0 +1,53 @@
+name: 화면별 관리 보드 배포
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/govbiz-screens.js'
+      - 'tools/build-frames.js'
+      - 'tools/build-board.mjs'
+      - '.github/workflows/board.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: board-pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: 프레임 생성
+        run: node tools/build-board.mjs
+
+      - name: 생성 결과 확인
+        run: |
+          count=$(ls public-board/*.html | wc -l)
+          echo "생성된 HTML: $count"
+          test "$count" -ge 20
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public-board
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
